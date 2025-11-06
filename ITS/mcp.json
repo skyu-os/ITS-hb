@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "Framelink Figma MCP": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp",
+        "--figma-api-key=FIGMA_API_ACCESS_TOKEN",
+        "--stdio"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    },
+    "amap-maps-streamableHTTP": {
+      "url": "https://mcp.amap.com/mcp?key=d7156997547fbb1f5bb73e9342dc94eby"
+    }
+  }
+}

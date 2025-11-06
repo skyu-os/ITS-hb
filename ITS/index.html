@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ITS 智能交通预测系统</title>
+  <link rel="stylesheet" href="./assets/enhanced_style_fixed.css" />
+  <!-- 高德地图安全密钥（需在加载JSAPI之前设置） -->
+  <script>
+    window._AMapSecurityConfig = {
+      securityJsCode: '86df572bc935c2874d78a25289bab364'
+    };
+  </script>
+  <!-- 高德地图 JS API v2 -->
+  <script src="https://webapi.amap.com/maps?v=2.0&key=3809941af1ec00b87b03a1278c07d9f4"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>🚦 ITS 智能交通预测系统</h1>
+    </header>
+
+    <div class="controls-container">
+      <!-- 模块导航：未来感胶囊式分类 -->
+      <nav class="module-nav" id="module-nav">
+        <button class="nav-item active" data-target="smart">智能路径</button>
+        <button class="nav-item" data-target="route">路线规划</button>
+        <button class="nav-item" data-target="traffic">交通态势</button>
+        <button class="nav-item" data-target="predict">预测优化</button>
+        <button class="nav-item" data-target="biz">商圈分析</button>
+        <button class="nav-item" data-target="weather">天气</button>
+        <button class="nav-item" data-target="map">地图</button>
+      </nav>
+      
+      <div class="control-groups">
+        <div class="control-group" data-module="map">
+          <label class="switch">
+            <input type="checkbox" id="traffic-toggle" />
+            <span class="slider"></span>
+          </label>
+          <span class="label">显示交通拥堵图层</span>
+        </div>
+
+        <!-- 地图切换控件 -->
+        <div class="control-group basemap-switch" data-module="map">
+          <label class="label">地图切换</label>
+          <select id="basemap-mode" title="底图样式">
+            <option value="darkblue" selected>深蓝</option>
+            <option value="normal">标准</option>
+            <option value="satellite">卫星</option>
+            <option value="satellite_road">卫星+路网</option>
+          </select>
+        </div>
+
+        <div class="control-group weather" data-module="weather">
+          <input id="city-input" type="text" placeholder="输入城市（如：杭州市、北京市）" value="杭州市" />
+          <button id="btn-change-city">切换城市</button>
+          <button id="btn-live">查询实时天气</button>
+          <button id="btn-forecast">查询天气预报</button>
+        </div>
+
+        <div class="control-group routing" data-module="route">
+          <input id="origin-input" type="text" placeholder="起点（地址或经纬度：lng,lat）" />
+          <input id="dest-input" type="text" placeholder="终点（地址或经纬度：lng,lat）" />
+          <select id="route-mode" title="交通方式">
+            <option value="driving">驾车</option>
+            <option value="transfer">公交/地铁</option>
+            <option value="walking">步行</option>
+            <option value="riding">骑行</option>
+            <option value="taxi">出租车</option>
+          </select>
+          <button id="btn-route">开始规划</button>
+          <button id="btn-clear-route">清除路线</button>
+          <button id="btn-route-advanced" class="ghost">高级选项</button>
+        </div>
+
+        <!-- 路径规划策略和路况显示开关 -->
+        <div class="control-group routing-opts collapsed" data-module="route">
+          <label class="label">策略</label>
+          <select id="route-policy">
+            <option value="LEAST_TIME">最快时间</option>
+            <option value="LEAST_DISTANCE">最短距离</option>
+            <option value="LEAST_FEE">费用最少</option>
+          </select>
+          <label class="label"><input type="checkbox" id="route-show-traffic" /> 显示实时路况</label>
+        </div>
+
+        <!-- 智能路径偏好与推荐 -->
+        <div class="control-group smart-routing" data-module="smart">
+          <label class="label">智能路径偏好</label>
+          <input id="pref-time" type="number" min="0" max="5" step="1" value="3" title="时间权重" />
+          <input id="pref-distance" type="number" min="0" max="5" step="1" value="2" title="距离权重" />
+          <input id="pref-fee" type="number" min="0" max="5" step="1" value="2" title="费用权重" />
+          <input id="pref-transfer" type="number" min="0" max="5" step="1" value="1" title="换乘权重" />
+          <input id="pref-walking" type="number" min="0" max="5" step="1" value="1" title="步行权重" />
+          <label class="label"><input type="checkbox" id="pref-real-traffic" checked /> 考虑实时路况</label>
+          <button id="btn-smart-route">智能推荐路径</button>
+        </div>
+
+        <!-- 交通态势查询控件 -->
+        <div class="control-group traffic-status" data-module="traffic">
+          <label class="label">态势类型</label>
+          <select id="traffic-type">
+            <option value="circle">圆形</option>
+            <option value="rectangle">矩形</option>
+          </select>
+          <input id="traffic-radius" type="number" min="1" max="5" step="1" value="3" placeholder="半径（公里）" />
+          <label class="label"><input type="checkbox" id="traffic-autorefresh" /> 自动刷新</label>
+          <input id="traffic-ws-key" type="password" placeholder="Web服务Key（restapi）" />
+          <button id="btn-traffic-query">查询态势</button>
+          <button id="btn-traffic-clear">清除态势</button>
+        </div>
+
+        <!-- 商圈分析控件 -->
+        <div class="control-group biz-analyze" data-module="biz">
+          <label class="label">商圈半径</label>
+          <input id="biz-radius" type="number" min="0.5" max="5" step="0.5" value="1.0" placeholder="半径（公里）" />
+          <button id="btn-biz-analyze">开始分析</button>
+          <button id="btn-biz-export">导出报告</button>
+        </div>
+
+        <!-- 预测与优化控件 -->
+        <div class="control-group predict-opt" data-module="predict">
+          <label class="label">预测模型</label>
+          <select id="model-type">
+            <option value="enhanced">增强模型（推荐）</option>
+            <option value="basic">基础模型</option>
+            <option value="simple">简单模型</option>
+          </select>
+          <label class="label">采集时长</label>
+          <input id="collect-duration" type="number" min="5" max="180" step="5" value="30" placeholder="分钟" />
+          <label class="label">采样间隔</label>
+          <input id="collect-interval" type="number" min="30" max="600" step="30" value="120" placeholder="秒" />
+          <label class="label">目标指标</label>
+          <select id="predict-target">
+            <option value="congestion_ratio">拥堵比例</option>
+            <option value="avg_speed">平均速度</option>
+          </select>
+          <button id="btn-collect-start">开始采集</button>
+          <button id="btn-collect-stop">停止采集</button>
+          <button id="btn-predict-hourly">预测（小时级）</button>
+          <button id="btn-predict-daily">预测（日/周级）</button>
+          <button id="btn-generate-optimization">生成优化建议</button>
+          <button id="btn-ml-predict" class="primary">智能交通预测</button>
+        </div>
+
+        <!-- 采集定位控件（两种模式切换：手动中心/地址定位） -->
+        <div class="control-group collection-locate" data-module="predict">
+          <label class="label">采集定位模式</label>
+          <label><input type="radio" name="collect-mode" id="collect-mode-manual" checked /> 手动中心（3km）</label>
+          <label><input type="radio" name="collect-mode" id="collect-mode-address" /> 地址定位（3km）</label>
+          <button id="btn-collect-set-center" title="将采集中心设置为当前地图中心">使用当前地图中心</button>
+          <input id="collect-address" type="text" placeholder="如：福州仓山万达广场" />
+          <button id="btn-collect-geocode">地址定位</button>
+          <span class="label" id="collect-center-info">中心：—，半径：3km</span>
+        </div>
+      </div>
+    </div>
+
+    <main class="main">
+      <div class="map-container">
+        <div id="map" class="map"></div>
+      </div>
+      <aside class="sidebar">
+        <div class="card" data-module="route">
+          <h3>路线规划</h3>
+          <div id="route-panel" class="route-panel empty">在此显示路线详情</div>
+        </div>
+        <div class="card" data-module="traffic">
+          <h3>交通态势</h3>
+          <div id="traffic-status-panel" class="traffic-panel empty">暂无数据</div>
+        </div>
+        <div class="card" data-module="biz">
+          <h3>商圈分析报告</h3>
+          <div id="biz-report" class="biz-panel empty">暂无数据</div>
+        </div>
+        <div class="card" data-module="predict">
+          <h3>预测与优化</h3>
+          <div id="opt-report" class="opt-panel empty">暂无数据</div>
+        </div>
+
+        <!-- 预测结果面板 -->
+        <div class="card" id="predict-result" data-module="predict">
+          <h3 class="card-title">预测结果</h3>
+          <div class="predict-content empty">尚无预测结果，请点击"智能交通预测"。</div>
+        </div>
+        <div class="card" data-module="weather">
+          <h3>实时天气</h3>
+          <div id="weather-live" class="weather-content empty">暂无数据</div>
+        </div>
+        <div class="card" data-module="weather">
+          <h3>天气预报</h3>
+          <div id="weather-forecast" class="weather-content empty">暂无数据</div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      <small>地图与数据来自高德地图 · 仅用于演示</small>
+    </footer>
+  </div>
+
+  <script src="./assets/ml.js"></script>
+  <script src="./assets/enhanced_ml.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "model_type": "轻量级规则模型",
+  "training_status": "已完成",
+  "performance_metrics": {
+    "r2_score": 0.114,
+    "mse": 0.027,
+    "mae": 0.141
+  },
+  "feature_importance": {
+    "hour": 0.3,
+    "day_of_week": 0.2,
+    "traffic_level": 0.25,
+    "avg_speed": 0.15,
+    "congestion_ratio": 0.1
+  },
+  "model_interpretation": {
+    "主要特征": "小时、星期几、交通水平对预测影响最大",
+    "模式识别": "早晚高峰时段拥堵概率较高，工作日交通更繁忙",
+    "预测可靠性": "基于历史模式和实时特征的规则引擎"
+  }
+}

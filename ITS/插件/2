@@ -1,0 +1,55 @@
+; 时空特征工程
+import torch
+import torch_geometric as tg
+import numpy as np
+
+class SpatioTemporalFeatureExtractor:
+    def __init__(self):
+        self.node_features = []
+        self.edge_index = []
+        self.temporal_sequences = []
+    
+    def build_traffic_graph(self, road_network, historical_data):
+        """构建交通图结构"""
+        # 节点特征：道路属性
+        nodes = []
+        for road in road_network['roads']:
+            node_feature = [
+                road['length'],           # 道路长度
+                road['width'],            # 道路宽度
+                road['level'],            # 道路等级
+                road['direction'],        # 方向
+                road['max_speed']         # 最高限速
+            ]
+            nodes.append(node_feature)
+        
+        # 边连接：道路拓扑关系
+        edges = []
+        for connection in road_network['connections']:
+            edges.append([connection['from'], connection['to']])
+        
+        self.node_features = torch.tensor(nodes, dtype=torch.float)
+        self.edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+    
+    def extract_temporal_features(self, traffic_data, window_size=12):
+        """提取时间序列特征"""
+        # 按时间窗口组织数据
+        sequences = []
+        for i in range(len(traffic_data) - window_size):
+            sequence = traffic_data[i:i+window_size]
+            
+            temporal_features = []
+            for time_step in sequence:
+                step_features = [
+                    time_step['speed'],           # 平均速度
+                    time_step['volume'],          # 流量
+                    time_step['congestion_level'], # 拥堵等级
+                    time_step['travel_time'],     # 通行时间
+                    time_step['timestamp'].hour,  # 小时
+                    time_step['timestamp'].weekday() # 周几
+                ]
+                temporal_features.append(step_features)
+            
+            sequences.append(temporal_features)
+        
+        self.temporal_sequences = torch.tensor(sequences, dtype=torch.float)

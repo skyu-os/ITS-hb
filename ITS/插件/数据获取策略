@@ -1,0 +1,35 @@
+# 后端数据获取示例
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
+
+class TrafficDataCollector:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = "https://restapi.amap.com/v3"
+    
+    def get_road_network(self, city_code):
+        """获取路网拓扑结构"""
+        url = f"{self.base_url}/config/district"
+        params = {
+            'key': self.api_key,
+            'keywords': city_code,
+            'subdistrict': 2,
+            'extensions': 'all'
+        }
+        response = requests.get(url, params=params)
+        return self._parse_road_network(response.json())
+    
+    def get_realtime_traffic(self, roads):
+        """获取实时交通数据"""
+        traffic_data = []
+        for road in roads:
+            url = f"{self.base_url}/traffic/status/road"
+            params = {
+                'key': self.api_key,
+                'name': road['name'],
+                'adcode': road['adcode']
+            }
+            response = requests.get(url, params=params)
+            traffic_data.extend(self._parse_traffic_data(response.json()))
+        return traffic_data

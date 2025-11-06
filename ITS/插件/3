@@ -1,0 +1,52 @@
+ST-GCN模型实现
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import GCNConv, ChebConv
+
+class STGCN(nn.Module):
+    def __init__(self, node_dim, temporal_dim, hidden_dim, output_dim, num_nodes):
+        super(STGCN, self).__init__()
+        
+        # 空间图卷积层
+        self.spatial_conv1 = GCNConv(node_dim, hidden_dim)
+        self.spatial_conv2 = GCNConv(hidden_dim, hidden_dim)
+        
+        # 时间卷积层
+        self.temporal_conv1 = nn.Conv1d(hidden_dim, hidden_dim, kernel_size=3, padding=1)
+        self.temporal_conv2 = nn.Conv1d(hidden_dim, hidden_dim, kernel_size=3, padding=1)
+        
+        # 预测层
+        self.fc = nn.Linear(hidden_dim * temporal_dim, output_dim)
+        
+    def forward(self, x, edge_index, temporal_seq):
+        # x: 节点特征 [num_nodes, node_dim]
+        # temporal_seq: 时间序列 [batch_size, seq_len, num_nodes, temporal_dim]
+        
+        batch_size, seq_len, num_nodes, _ = temporal_seq.shape
+        
+        # 空间特征提取
+        spatial_features = F.relu(self.spatial_conv1(x, edge_index))
+        spatial_features = F.relu(self.spatial_conv2(spatial_features, edge_index))
+        
+        # 时空特征融合
+        outputs = []
+        for t in range(seq_len):
+            # 结合时间步特征
+            time_step_data = temporal_seq[:, t, :, :]
+            # 空间特征与时间特征融合
+            combined = spatial_features.unsqueeze(0) + time_step_data.mean(dim=-1, keepdim=True)
+            outputs.append(combined)
+        
+        # 时间维度卷积
+        temporal_output = torch.stack(outputs, dim=2)  # [batch_size, num_nodes, seq_len, hidden_dim]
+        temporal_output = temporal_output.permute(0, 3, 1, 2)  # 调整维度用于1D卷积
+        
+        # 时间卷积
+        temporal_features = F.relu(self.temporal_conv1(temporal_output))
+        temporal_features = F.relu(self.temporal_conv2(temporal_features))
+        
+        # 预测
+        temporal_features = temporal_features.reshape(batch_size, -1)
+        prediction = self.fc(temporal_features)
+        
+        return prediction
